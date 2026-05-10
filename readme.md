@@ -9,12 +9,12 @@ The core of this ecosystem is a multi-bridge network design that enforces strict
 <img width="727" height="749" alt="Screenshot 2026-05-10 at 21 37 23" src="https://github.com/user-attachments/assets/f3877ef0-fc66-41f6-8faf-eca04b3e9f4f" />
 
 ### Technology Stack
-- Hypervisor: Proxmox VE (Type-1)
-- Networking: pfSense (Firewall/Routing), Linux Bridges (Segmentation)
-- Identity & Endpoints: Windows Server 2022 (Active Directory), Windows 10/11
-- SIEM & Telemetry: Splunk Enterprise, Sysmon, Splunk Universal Forwarder
-- Adversary Emulation: Kali Linux, Atomic Red Team
-- Hardware: Lenovo ThinkCentre M920q (i5-8500T, 32GB RAM)
+- **Hypervisor:** Proxmox VE (Type-1)
+- **Networking:** pfSense (Firewall/Routing), Linux Bridges (Segmentation)
+- **Identity & Endpoints:** Windows Server 2022 (Active Directory), Windows 10/11
+- **SIEM & Telemetry:** Splunk Enterprise, Sysmon, Splunk Universal Forwarder
+- **Adversary Emulation:** Kali Linux, Atomic Red Team
+- **Hardware:** Lenovo ThinkCentre M920q (i5-8500T, 32GB RAM)
 
 ### Project Roadmap
 **Part 1: Designing Infrastructure and Network Logic**
