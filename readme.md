@@ -1,26 +1,32 @@
 # Architecting a Resilient SOC Ecosystem
 
-### Objective
-The Active Directory Detection Lab project involved the deployment of a virtualized domain environment integrated with Splunk, Kali Linux, and the Atomic Red Team framework. The primary objective was to engineer a robust pipeline for ingesting security events into a SIEM, enabling deep analysis of enterprise-level telemetry. By simulating adversary techniques seen in the real world, the project provided hands-on experience in correlating log data with specific attack patterns to refine detection logic and defensive posture.
+### Project Overview
+Engineered a segmented, multi-zone SOC infrastructure on Proxmox to host adversary emulations and validate detection integrity via a high-fidelity telemetry pipeline. This project demonstrates the full lifecycle of defensive security engineering: from hardware-level optimization and network architecture to identity management and automated detection validation.
 
-### Skills Learned
-- Implemented centralized log ingestion and complex data correlation within Splunk.
-- Simulated real-world threat TTPs using the MITRE ATT&CK framework and Atomic Red Team.
-- Analyzed and interpreted disparate data sources, including Sysmon and Windows Event Logs.
-- Identified malicious traffic patterns and protocol anomalies across TCP/IP, DNS, and HTTP/S.
-- Applied structured methodologies for alert triage, root-cause analysis, and threat mitigation.
+### Architectural Blueprint
+The core of this ecosystem is a multi-bridge network design that enforces strict isolation between zones. By utilizing a virtualized "air-gap" strategy, the lab ensures that adversary traffic is contained while telemetry flows securely to the central monitoring vault.
 
-### Tools Used
-- Virtualization: VMware Fusion Pro (Apple Silicon Architecture).
-- SIEM: Splunk Enterprise (Advanced SPL Querying).
-- Operating Systems: Windows Server Core, Ubuntu Server (Headless), and Kali Linux.
-- Telemetry & Logging: Sysmon, Windows Event Logs, and Splunk Universal Forwarder.
-- Adversary Emulation: Atomic Red Team (MITRE ATT&CK Framework).
-- Network Monitoring: Zeek (Network Metadata Analysis).
-- Threat Intelligence: MISP (Indicators of Compromise Correlation).
+<img width="727" height="749" alt="Screenshot 2026-05-10 at 21 37 23" src="https://github.com/user-attachments/assets/f3877ef0-fc66-41f6-8faf-eca04b3e9f4f" />
 
-## Steps
-I started by designing the network architecture to define the data flow between the attack, target, and analysis nodes.
+### Technology Stack
+- Hypervisor: Proxmox VE (Type-1)
+- Networking: pfSense (Firewall/Routing), Linux Bridges (Segmentation)
+- Identity & Endpoints: Windows Server 2022 (Active Directory), Windows 10/11
+- SIEM & Telemetry: Splunk Enterprise, Sysmon, Splunk Universal Forwarder
+- Adversary Emulation: Kali Linux, Atomic Red Team
+- Hardware: Lenovo ThinkCentre M920q (i5-8500T, 32GB RAM)
 
-*Ref 1: Network Diagram* <br>
-<img width="717" height="583" alt="Screenshot 2026-04-14 at 17 11 17" src="https://github.com/user-attachments/assets/75ab062d-e232-49b6-8eb1-602713ed7112" />
+### Project Roadmap
+**Part 1: Designing Infrastructure and Network Logic**
+- Focused on establishing the physical and virtual foundation. This section covers BIOS-level optimizations, repository hardening, and the implementation of a multi-zone network architecture to minimize the lab's "blast radius."
+
+**Part 2: Engineering Identity and Telemetry Visibility**
+- (In Progress) Deployment of the Windows Active Directory domain and the engineering of the data pipeline. This phase focuses on endpoint hardening via GPO and the ingestion of high-fidelity Sysmon logs into Splunk.
+
+**Part 3: Validating Detection via Adversary Emulation**
+- (In Progress) The "Proof of Work" phase. Utilizing Atomic Red Team to simulate specific MITRE ATT&CK techniques and validating that the defensive architecture accurately detects and alerts on malicious behavior.
+
+### Key Takeaways
+- Implemented a Zero-Trust gateway approach where internal subnets have no physical route to the internet, preventing C2 "call-backs" and data exfiltration.
+- Balanced the resource demands of a full-stack SIEM and Windows domain on a single physical node through efficient resource allocation and VirtIO drivers.
+- Moved beyond "basic testing" to professional adversary emulation, ensuring that security controls are not just present, but functional and integrated.
