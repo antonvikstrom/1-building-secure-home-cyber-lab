@@ -17,7 +17,7 @@ The core of this ecosystem is a multi-bridge network design that enforces strict
 - **Hardware:** Lenovo ThinkCentre M920q (i5-8500T, 32GB RAM)
 
 ### Project Roadmap
-**Part 1: Designing Infrastructure and Network Logic**
+[**Part 1: Designing Infrastructure and Network Logic**](https://github.com/antonvikstrom/soc-01-infrastructure-network-logic)
 - Focused on establishing the physical and virtual foundation. This section covers BIOS-level optimizations, repository hardening, and the implementation of a multi-zone network architecture to minimize the lab's "blast radius."
 
 **Part 2: Engineering Identity and Telemetry Visibility**
