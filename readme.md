@@ -18,7 +18,7 @@ The core of this ecosystem is a multi-bridge network design that enforces strict
 
 ### Project Roadmap
 [**Part 1: Designing Infrastructure and Network Logic**](https://github.com/antonvikstrom/soc-01-infrastructure-network-logic)
-- Focused on establishing the physical and virtual foundation. This section covers BIOS-level optimizations, repository hardening, and the implementation of a multi-zone network architecture to minimize the lab's "blast radius."
+- Focused on establishing the physical and virtual foundation. This section covers BIOS-level optimizations, repository hardening, and the implementation of a multi-zone network architecture to minimize the lab's "blast radius".
 
 **Part 2: Engineering Identity and Telemetry Visibility**
 - (In Progress) Deployment of the Windows Active Directory domain and the engineering of the data pipeline. This phase focuses on endpoint hardening via GPO and the ingestion of high-fidelity Sysmon logs into Splunk.
