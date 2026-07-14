@@ -68,52 +68,52 @@ I set up my main Splunk server inside the server zone. At first, I couldn't reac
 
 I installed Splunk on a fresh Ubuntu server at `10.1.1.10`. Right away, I couldn't log into the console because the Ubuntu installer had defaulted to a US keyboard layout, which scrambled the special characters on my physical Swedish keyboard. I copy-pasted the password over an active SSH session to get in, then fixed the keyboard settings.
 
--
+<img width="531" height="351" alt="ubuntu-keyboard-setup" src="https://github.com/user-attachments/assets/5e4844d0-fb12-4787-b787-5df71f9e0c72" />
 
 When I tried starting Splunk, it crashed immediately because extracting the files with root privileges left the folders owned by root. A quick `chown` fixed the permissions. I created a firewall index capped at 100 GB and a Linux index capped at 50 GB. I found out that Linux blocks regular accounts from using ports below 1024, so I set up my Splunk listener on port 1514 instead.
 
-![[splunk-udp-input.png|633]]
+<img width="1239" height="658" alt="splunk-udp-input" src="https://github.com/user-attachments/assets/71025472-cabd-4b17-8eb4-b55f6dfd9e56" />
 
 In pfSense, I turned on remote logging and pointed it to `10.1.1.10:1514`, which instantly filled my dashboard with logs.
 
-![[pfsense-remote-logging.png]]
+<img width="1151" height="728" alt="pfsense-remote-logging" src="https://github.com/user-attachments/assets/af551fea-965b-4122-ba02-751e0956f34e" />
 
 To collect operating system logs from my Linux client, I installed the Splunk forwarder, but it wouldn't read the command history file. I realized my sudo command had left the file owned by root. After changing file ownership and granting the forwarder permissions to read the home directory, the logs started populating.
 
-![[splunk-log-breakdown.png]]
+<img width="1105" height="434" alt="splunk-log-breakdown" src="https://github.com/user-attachments/assets/dab1e4fb-8d5c-48fe-b17e-a1897951ae82" />
 
 ### Active Directory & Domain Policy
 
 I built a Windows Server 2022 domain controller at 10.1.1.20. I used standard drive settings so Windows could read the disk, mapped the network card to the VirtIO driver, and turned off the hypervisor firewall so pfSense would handle the security. Since Windows doesn't have VirtIO drivers built-in, it booted completely offline. I mounted the guest driver ISO to the virtual CD drive and used Device Manager to install the network card.
 
-![[dc01-proxmox-hardware.png|547]]
+<img width="663" height="26" alt="dc01-proxmox-hardware" src="https://github.com/user-attachments/assets/d4b56bab-6665-484d-9d19-65973d2b11c6" />
 
 I changed the server name to `dc01` and promoted it to a domain controller for `corp.vks-labs.com`. I also set up a folder structure inside AD with Endpoints, Servers, and Staff folders.
 
-![[active-directory-ou-architectureScreenshot 2026-06-28 at 17.19.18.png|209]]
+<img width="188" height="197" alt="active-directory-ou-architectureScreenshot 2026-06-28 at 17 19 18" src="https://github.com/user-attachments/assets/dd7f97f7-c9e2-4064-87a1-1d8ac9d3c5a3" />
 
 I configured a Windows Jump Box at 10.1.1.50 but left it unjoined from the domain. This ensures Domain Admin passwords are never saved in its memory where an attacker's tool could find them. I used remote management tools and a custom script to securely manage AD from this unjoined workstation, using the DC's console only for Group Policy edits.
 
-![[admanager-showcase.png]]
+<img width="1274" height="204" alt="admanager-showcase" src="https://github.com/user-attachments/assets/e7b8349c-d235-4e6f-a8d6-c5c6da360a15" />
 
 When I tried to join the Windows client in OPT2 to the domain, the connection timed out. I traced this to my firewall isolation rule blocking local traffic. Dragging an AD authentication pass rule to the top of my OPT2 rule list fixed the timeout instantly.
 
-![[pfsense-ad-pass-rule.png]]
+<img width="1159" height="311" alt="pfsense-ad-pass-rule" src="https://github.com/user-attachments/assets/4f56cb2e-d1a9-4d54-8f7f-133f9d708541" />
 
 To capture command-line activity, I made a domain Group Policy and enabled PowerShell script block logging and module logging.
 
-![[Screenshot 2026-07-06 at 18.49.31.png]]
+<img width="1228" height="254" alt="Screenshot 2026-07-06 at 18 49 31" src="https://github.com/user-attachments/assets/2e772c72-303c-4f98-acbf-38f9162a11a6" />
 
 The client initially failed to fetch this policy. I found out there was a 9-hour time drift between my host's motherboard clock and the DC. Because Active Directory rejects any clock difference over 5 minutes, I forced the client to sync with the DC using the `net time` command, then fixed the server's timezone.
 
 Even with the time aligned, test commands wouldn't show up in Splunk. A policy report showed that the client computer object was sitting in the default `Computers` folder, which doesn't support policy inheritance. I dragged the machine object into my `Endpoints` folder, renamed the computer to `win10-client01`, and rebooted.
 
-![[Screenshot 2026-07-06 at 19.04.43.png|435]]
+<img width="454" height="158" alt="Screenshot 2026-07-06 at 19 04 43" src="https://github.com/user-attachments/assets/4a631867-4af6-46ec-b3d0-fa98bb2efb41" />
 
 After rebooting, the GPO applied perfectly, but logs still weren't populating Splunk because the forwarder's configurations lacked a path for the PowerShell log channel. I opened `inputs.conf` in Notepad, manually appended the path, and restarted the forwarder.
 
-![[Screenshot 2026-07-06 at 19.21.46.png|455]]
+<img width="538" height="528" alt="Screenshot 2026-07-06 at 19 21 46" src="https://github.com/user-attachments/assets/5f4b9847-6a23-4753-bc9b-033afca60cc4" />
 
 I opened a shell on the client, typed a test command, and watched it immediately register as EventCode 4104 in Splunk!
 
-![[Screenshot 2026-07-06 at 20.17.53.png]]
+<img width="1421" height="321" alt="Screenshot 2026-07-06 at 20 17 53" src="https://github.com/user-attachments/assets/10fa1c82-ad9c-4393-b2c8-a0cd87e15038" />
