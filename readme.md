@@ -1,42 +1,119 @@
-# Architecting a Resilient SOC Ecosystem
+## Project 1: Building a Secure Home Cyber Lab: pfSense, Active Directory, and Splunk
 
-### Project Overview
-This project covers how I built a segmented, 6-zone security lab using a Proxmox hypervisor. The network is designed to safely run cyber attack simulations, contain malicious traffic, and send log data to a central security monitoring system. Building this lab taught me the core steps of enterprise security engineering: from setting up firewalls and network zones to managing user identities and validating detections.
+### System Architecture & End-Goal Topology
 
-### Architectural Blueprint
-The foundation of the lab is a network layout that creates strict, isolated "air-gaps" between zones in the server's memory. A central pfSense firewall acts as the sole gatekeeper, separating the lab into three main traffic paths:
+<img width="782" height="763" alt="Screenshot 2026-07-06 at 21 13 20" src="https://github.com/user-attachments/assets/ecb6b04c-18bf-40f9-a294-591426c0820e" />
 
-- **The Attack Path:** Blocks direct communication between network zones, forcing all attacker movement to pass through the firewall for inspection.
-- **The Telemetry Path:** Uses a secure firewall rule to stream system logs straight down to a central Splunk SIEM on port 9997.
-- **The Management Path:** Restricts administrative access by routing my home network connection directly and exclusively through a secure Jumpbox.
+**Note:** This blueprint represents the complete 6-zone enterprise topology strived for across my lab builds. Project 1 establishes the virtual networking, centralized routing, storage policies, and core telemetry ingestion pipeline required to safely support future adversary emulation and analysis phases.
 
-<img width="939" height="777" alt="soc-network-diagram" src="https://github.com/user-attachments/assets/8f3c2ec3-80bc-4f48-b23b-0dbcd6f5d8f3" />
+#### Asset Inventory
 
-### Technology Stack
-- **Hypervisor:** Proxmox VE (Type-1 Bare-Metal)
-- **Firewall & Routing:** pfSense Appliance
-- **SIEM & Logging:** Splunk Enterprise, Windows Sysmon, Splunk Universal Forwarder
-- **Identity & Management:** Windows Server 2022 (Active Directory DC), Ubuntu Server (Management Jumpbox)
-- **Endpoints & Analysis:** Windows 10/11 Workstations, Ubuntu Desktop, Tsurugi Linux (Forensics & Analysis)
-- **Offensive Testing:** Kali Linux, Atomic Red Team
-- **Physical Hardware:** Lenovo ThinkCentre M920q (Intel i5-8500T, 32GB RAM, 480GB SSD)
+|**Hostname**|**OS**|**IP Address**|**Subnet / Zone**|**Role**|
+|---|---|---|---|---|
+|**pfSense**|FreeBSD|`10.1.x.1`|Gateway Core|Central Router & Policy Firewall|
+|**oob-gateway**|Alpine Linux|`192.168.50.50`|Out-of-Band|WireGuard LXC remote access|
+|**splunk-siem**|Ubuntu Server|`10.1.1.10`|Server Vault (LAN)|Central Log Indexer & Analytics|
+|**dc01**|Windows Server 2022|`10.1.1.20`|Server Vault (LAN)|Active Directory Domain Controller|
+|**win10-jump**|Windows 10|`10.1.1.50`|Server Vault (LAN)|Hardened Administration Workstation|
+|**win10-client01**|Windows 10|`10.1.3.100`|Target Zone (OPT2)|Domain-joined Active Directory client|
 
-### Project Roadmap
-[**Part 1: Designing Infrastructure and Network Logic**](https://github.com/antonvikstrom/soc-01-infrastructure-network-logic)
+#### Network Segmentation Policy
 
-Covers hardware optimization, software repository setup, network zoning, building the asset inventory, and configuring the central pfSense firewall to safely contain traffic.
+| **Interface**     | **Subnet**    | **Gateway** | **DHCP** | **Outbound Rule Policy**                          |
+| ----------------- | ------------- | ----------- | -------- | ------------------------------------------------- |
+| **LAN (Server)**  | `10.1.1.0/24` | `10.1.1.1`  | Disabled | Isolated. Custom pass rules for AD/DNS sync only. |
+| **OPT1 (DMZ)**    | `10.1.2.0/24` | `10.1.2.1`  | Enabled  | Internet allowed; all local lab zones blocked.    |
+| **OPT2 (Target)** | `10.1.3.0/24` | `10.1.3.1`  | Enabled  | Internet allowed; all local lab zones blocked.    |
+| **OPT3 (Attack)** | `10.1.4.0/24` | `10.1.4.1`  | Enabled  | Internet allowed; all local lab zones blocked.    |
+| **OPT4 (Clean)**  | `10.1.5.0/24` | `10.1.5.1`  | Disabled | No internet access allowed.                       |
 
-**Part 2: Engineering Identity and Telemetry Visibility (In Progress)**
+## Hypervisor & Centralized Routing
 
-Focuses on deploying a Windows Active Directory domain, hardening endpoints using Group Policies, deploying the Splunk agent, and building the log collection pipeline.
+I set up my lab on a small Lenovo ThinkCentre M920q mini-PC. First, I turned on virtualization in the BIOS, installed Proxmox VE, and swapped the setup over to the free community repository to get rid of the license pop-up.
 
-**Part 3: Validating Detection via Adversary Emulation (In Progress)**
+<img width="964" height="345" alt="pve01-repos" src="https://github.com/user-attachments/assets/1ab66090-ac39-4507-bdc3-2277018c1225" />
 
-Uses Atomic Red Team to launch realistic attack scripts from the Attack Zone, proving that the monitoring setup accurately captures and alerts on malicious behavior.
+Next, I used Proxmox's virtual switch settings to create five virtual networks named `vmbr1` through `vmbr5`. I left these networks completely disconnected from my physical home network so no traffic could leak out. In the center, I installed pfSense to act as my central router and firewall, mapping my bridge numbers directly to my subnets. I assigned static IPs to my core servers and set up DHCP for the client zones.
 
-### Key Takeaways
-Through designing this network, I learned how to isolate user traffic, log collection, and admin access. Setting up this model taught me how to stop attackers from communicating outside their designated zones and prevent them from tampering with core servers.
+To manage the lab remotely without exposing it to the web, I created an unprivileged Alpine Linux container running WireGuard. Because of the safety locks on unprivileged containers, it couldn't talk to the network cards. I found out I had to manually edit the container's config file on Proxmox to pass through the `/dev/net/tun` device.
 
-I gained practical experience in resource management by running a full enterprise network—including Active Directory, an attack platform, and a resource-heavy SIEM system—on a single mini-PC. Building this taught me how to configure hypervisor settings and optimized virtual drivers to keep the entire lab running smoothly without performance lag.
+<img width="896" height="236" alt="Screenshot 2026-07-14 at 12 27 03" src="https://github.com/user-attachments/assets/2011275f-3b0e-4b23-847a-aafa5bedf688" />
 
-Finally, this project changed how I approach security tools. Instead of just installing software and assuming it works, I learned how to actively test my defenses. Using automated attack scripts taught me how to systematically verify that my logging setup successfully catches real-world threats.
+Once that was done, I forwarded port UDP 51820 on my home router, set up a split-tunnel VPN, and turned on NAT routing using iptables inside Alpine. Finally, I went into pfSense and added a rule that only allows HTTPS management access from my WireGuard IP at 192.168.50.50.
+
+<img width="1155" height="350" alt="pfsense-wan-rule" src="https://github.com/user-attachments/assets/47e72061-ab5f-42b0-b41c-870417b6d2d6" />
+
+### Network Rules & Storage Architecture
+
+To make sure malware couldn't crawl into other networks, I made a pfSense list called `All_Private_IPs` covering my local subnets. On my main networks, I put a simple two-rule security setup at the top of the list: one rule to pass logs up to my Splunk server (10.1.1.10) on port 9997, and another that allows internet access while blocking everything on my local IP list. This let my VMs fetch updates but stopped them from talking to each other.
+
+<img width="1155" height="250" alt="pfsense-aliases" src="https://github.com/user-attachments/assets/18433d18-ed10-4a4f-990b-ac4e7bf8c804" />
+
+I set up DHCP on OPT1, OPT2, and OPT3, but kept it off on the server zone (LAN) and the OPT4 malware clean room to keep things stable. On the malware clean room (OPT4) interface, I took away the internet rule completely. Leaving only the Splunk port open meant active malware would stay completely offline but still send logs back to my SIEM.
+
+<img width="1160" height="258" alt="pfsense-opt4-ruleset" src="https://github.com/user-attachments/assets/8c172f2a-f1ff-4751-a50a-6a3c476a4d66" />
+
+
+To get extra space, I plugged in a 1TB Samsung T7 external USB SSD. I formatted it as ext4 because I read it's much better at saving data if the USB cord gets bumped. I grabbed the drive's UUID using `blkid` and added it to my fstab file with the `nofail` flag so Proxmox wouldn't crash on startup if the drive wasn't plugged in.
+
+<img width="900" height="111" alt="samsung-t7" src="https://github.com/user-attachments/assets/2cee58ba-a853-451a-aa31-8125e08ec0a9" />
+
+I split up my storage paths to protect my data: Splunk got a 300GB disk on the external SSD , but I kept pfSense and my Active Directory domain controller on the internal drive. I read that Active Directory databases can corrupt instantly if a USB drive gets disconnected for even a split second. I moved my Windows client and jumpbox to the SSD to free up space.
+
+### Setting Up Telemetry (Splunk & Syslog)
+
+I set up my main Splunk server inside the server zone. At first, I couldn't reach the internal network from my laptop. I found out the WireGuard container was missing a route back to my internal lab subnets. Adding a static route inside Alpine fixed the issue immediately.
+
+<img width="423" height="206" alt="alpine-wg-interfaces" src="https://github.com/user-attachments/assets/584ec069-a7c1-4955-9aad-33964a46cc05" />
+
+I installed Splunk on a fresh Ubuntu server at `10.1.1.10`. Right away, I couldn't log into the console because the Ubuntu installer had defaulted to a US keyboard layout, which scrambled the special characters on my physical Swedish keyboard. I copy-pasted the password over an active SSH session to get in, then fixed the keyboard settings.
+
+-
+
+When I tried starting Splunk, it crashed immediately because extracting the files with root privileges left the folders owned by root. A quick `chown` fixed the permissions. I created a firewall index capped at 100 GB and a Linux index capped at 50 GB. I found out that Linux blocks regular accounts from using ports below 1024, so I set up my Splunk listener on port 1514 instead.
+
+![[splunk-udp-input.png|633]]
+
+In pfSense, I turned on remote logging and pointed it to `10.1.1.10:1514`, which instantly filled my dashboard with logs.
+
+![[pfsense-remote-logging.png]]
+
+To collect operating system logs from my Linux client, I installed the Splunk forwarder, but it wouldn't read the command history file. I realized my sudo command had left the file owned by root. After changing file ownership and granting the forwarder permissions to read the home directory, the logs started populating.
+
+![[splunk-log-breakdown.png]]
+
+### Active Directory & Domain Policy
+
+I built a Windows Server 2022 domain controller at 10.1.1.20. I used standard drive settings so Windows could read the disk, mapped the network card to the VirtIO driver, and turned off the hypervisor firewall so pfSense would handle the security. Since Windows doesn't have VirtIO drivers built-in, it booted completely offline. I mounted the guest driver ISO to the virtual CD drive and used Device Manager to install the network card.
+
+![[dc01-proxmox-hardware.png|547]]
+
+I changed the server name to `dc01` and promoted it to a domain controller for `corp.vks-labs.com`. I also set up a folder structure inside AD with Endpoints, Servers, and Staff folders.
+
+![[active-directory-ou-architectureScreenshot 2026-06-28 at 17.19.18.png|209]]
+
+I configured a Windows Jump Box at 10.1.1.50 but left it unjoined from the domain. This ensures Domain Admin passwords are never saved in its memory where an attacker's tool could find them. I used remote management tools and a custom script to securely manage AD from this unjoined workstation, using the DC's console only for Group Policy edits.
+
+![[admanager-showcase.png]]
+
+When I tried to join the Windows client in OPT2 to the domain, the connection timed out. I traced this to my firewall isolation rule blocking local traffic. Dragging an AD authentication pass rule to the top of my OPT2 rule list fixed the timeout instantly.
+
+![[pfsense-ad-pass-rule.png]]
+
+To capture command-line activity, I made a domain Group Policy and enabled PowerShell script block logging and module logging.
+
+![[Screenshot 2026-07-06 at 18.49.31.png]]
+
+The client initially failed to fetch this policy. I found out there was a 9-hour time drift between my host's motherboard clock and the DC. Because Active Directory rejects any clock difference over 5 minutes, I forced the client to sync with the DC using the `net time` command, then fixed the server's timezone.
+
+Even with the time aligned, test commands wouldn't show up in Splunk. A policy report showed that the client computer object was sitting in the default `Computers` folder, which doesn't support policy inheritance. I dragged the machine object into my `Endpoints` folder, renamed the computer to `win10-client01`, and rebooted.
+
+![[Screenshot 2026-07-06 at 19.04.43.png|435]]
+
+After rebooting, the GPO applied perfectly, but logs still weren't populating Splunk because the forwarder's configurations lacked a path for the PowerShell log channel. I opened `inputs.conf` in Notepad, manually appended the path, and restarted the forwarder.
+
+![[Screenshot 2026-07-06 at 19.21.46.png|455]]
+
+I opened a shell on the client, typed a test command, and watched it immediately register as EventCode 4104 in Splunk!
+
+![[Screenshot 2026-07-06 at 20.17.53.png]]
