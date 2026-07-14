@@ -35,7 +35,7 @@ I set up my lab on a small Lenovo ThinkCentre M920q mini-PC. First, I turned on 
 
 Next, I used Proxmox's virtual switch settings to create five virtual networks named `vmbr1` through `vmbr5`. I left these networks completely disconnected from my physical home network so no traffic could leak out. In the center, I installed pfSense to act as my central router and firewall, mapping my bridge numbers directly to my subnets. I assigned static IPs to my core servers and set up DHCP for the client zones.
 
-To manage the lab remotely without exposing it to the web, I created an unprivileged Alpine Linux container running WireGuard. Because of the safety locks on unprivileged containers, it couldn't talk to the network cards. I found out I had to manually edit the container's config file on Proxmox to pass through the `/dev/net/tun` device.
+To manage the lab remotely without exposing it to the web, I created an unprivileged Alpine Linux container running WireGuard. Because of the safety locks on unprivileged containers, it couldn't talk to the network cards. I found out I had to manually edit the container's config file on Proxmox to pass through the `/dev/net/tun` device. By keeping this container unprivileged and only passing through this one specific network link, I locked it down. If someone ever hacks my VPN, they will be completely trapped inside that single container and won't be able to touch my main Proxmox host.
 
 <img width="896" height="236" alt="Screenshot 2026-07-14 at 12 27 03" src="https://github.com/user-attachments/assets/2011275f-3b0e-4b23-847a-aafa5bedf688" />
 
@@ -92,7 +92,7 @@ I changed the server name to `dc01` and promoted it to a domain controller for `
 
 <img width="188" height="197" alt="active-directory-ou-architectureScreenshot 2026-06-28 at 17 19 18" src="https://github.com/user-attachments/assets/dd7f97f7-c9e2-4064-87a1-1d8ac9d3c5a3" />
 
-I configured a Windows Jump Box at 10.1.1.50 but left it unjoined from the domain. This ensures Domain Admin passwords are never saved in its memory where an attacker's tool could find them. I used remote management tools and a custom script to securely manage AD from this unjoined workstation, using the DC's console only for Group Policy edits.
+I configured a Windows Jump Box at 10.1.1.50 but left it unjoined from the domain. Keeping this workstation out of the domain means that sensitive Domain Admin passwords are never saved in its local memory, which protects them from being stolen if the machine ever gets hacked. I used remote management tools and a custom script to securely manage AD from this unjoined workstation, using the DC's console only for Group Policy edits.
 
 <img width="1274" height="204" alt="admanager-showcase" src="https://github.com/user-attachments/assets/e7b8349c-d235-4e6f-a8d6-c5c6da360a15" />
 
